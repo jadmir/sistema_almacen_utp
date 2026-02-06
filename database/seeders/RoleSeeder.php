@@ -20,13 +20,8 @@ class RoleSeeder extends Seeder
                 'estado' => true,
             ],
             [
-                'nombre' => 'Usuario',
-                'descripcion' => 'Usuario regular del sistema',
-                'estado' => true,
-            ],
-            [
-                'nombre' => 'Almacenero',
-                'descripcion' => 'Encargado del almacén',
+                'nombre' => 'Asistente',
+                'descripcion' => 'Asistente de almacén',
                 'estado' => true,
             ],
         ];

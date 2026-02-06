@@ -19,6 +19,12 @@ class DatabaseSeeder extends Seeder
     {
         // Crear roles
         $this->call(RoleSeeder::class);
+        
+        // Crear permisos
+        $this->call(PermissionSeeder::class);
+        
+        // Asignar permisos a roles
+        $this->call(RolePermissionSeeder::class);
 
         // Crear usuario administrador
         $adminRole = Role::where('nombre', 'Admin')->first();
@@ -27,8 +33,17 @@ class DatabaseSeeder extends Seeder
             'rol_id' => $adminRole->id,
             'nombre' => 'Administrador',
             'email' => 'admin@almacen.com',
-            'password' => Hash::make('admin123'),
+            'password' => Hash::make('Admin123'),
             'estado' => true,
         ]);
+
+        // Crear sistema de inventario
+        $this->call(StockSystemSeeder::class);
+        
+        // Crear áreas
+        $this->call(AreaSeeder::class);
+        
+        // Crear productos y movimientos de ejemplo
+        $this->call(ProductExampleSeeder::class);
     }
 }
