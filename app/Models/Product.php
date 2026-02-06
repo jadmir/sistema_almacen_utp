@@ -67,4 +67,71 @@ class Product extends Model
     {
         return $this->stock_actual >= $quantity;
     }
+
+    // ==================== SCOPES ====================
+
+    /**
+     * Scope para productos activos
+     */
+    public function scopeActivo($query)
+    {
+        return $query->where('estado', true);
+    }
+
+    /**
+     * Scope para productos con stock bajo
+     */
+    public function scopeStockBajo($query)
+    {
+        return $query->whereRaw('stock_actual <= stock_minimo');
+    }
+
+    /**
+     * Scope para productos sin stock
+     */
+    public function scopeSinStock($query)
+    {
+        return $query->where('stock_actual', 0);
+    }
+
+    /**
+     * Scope para productos próximos a vencer
+     */
+    public function scopeProximosVencer($query, int $dias = 30)
+    {
+        return $query->where('tiene_vencimiento', true)
+            ->whereNotNull('fecha_vencimiento')
+            ->whereDate('fecha_vencimiento', '>', now())
+            ->whereDate('fecha_vencimiento', '<=', now()->addDays($dias));
+    }
+
+    /**
+     * Scope para productos vencidos
+     */
+    public function scopeVencidos($query)
+    {
+        return $query->where('tiene_vencimiento', true)
+            ->whereNotNull('fecha_vencimiento')
+            ->whereDate('fecha_vencimiento', '<', now());
+    }
+
+    /**
+     * Scope para búsqueda por texto
+     */
+    public function scopeBuscar($query, $search)
+    {
+        return $query->where(function ($q) use ($search) {
+            $q->where('nombre', 'like', "%{$search}%")
+              ->orWhere('codigo', 'like', "%{$search}%")
+              ->orWhere('descripcion', 'like', "%{$search}%");
+        });
+    }
+
+    /**
+     * Scope para cargar relaciones básicas optimizadas
+     */
+    public function scopeConRelaciones($query)
+    {
+        return $query->with(['section:id,nombre,codigo,stock_type_id', 'section.stockType:id,nombre,codigo_prefix']);
+    }
 }

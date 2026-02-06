@@ -8,21 +8,32 @@ use Illuminate\Http\Request;
 class MovementController extends Controller
 {
     /**
-     * Listar todos los movimientos con filtros
+     * Listar todos los movimientos con filtros - Optimizado
      */
     public function index(Request $request)
     {
         try {
-            $query = Movement::with(['product.section.stockType', 'user:id,nombre,email', 'area:id,nombre,codigo']);
+            // Query optimizada con eager loading selectivo
+            $query = Movement::conRelaciones();
 
             // Filtro por producto
             if ($request->filled('product_id')) {
                 $query->where('product_id', $request->product_id);
             }
 
-            // Filtro por tipo de movimiento
+            // Filtro por tipo de movimiento usando scopes
             if ($request->filled('tipo')) {
-                $query->where('tipo', $request->tipo);
+                switch ($request->tipo) {
+                    case 'ENTRADA':
+                        $query->entradas();
+                        break;
+                    case 'SALIDA':
+                        $query->salidas();
+                        break;
+                    case 'AJUSTE':
+                        $query->ajustes();
+                        break;
+                }
             }
 
             // Filtro por usuario
@@ -35,11 +46,12 @@ class MovementController extends Controller
                 $query->where('area_id', $request->area_id);
             }
 
-            // Filtro por rango de fechas
-            if ($request->filled('fecha_desde')) {
+            // Filtro por rango de fechas optimizado
+            if ($request->filled('fecha_desde') && $request->filled('fecha_hasta')) {
+                $query->entreFechas($request->fecha_desde, $request->fecha_hasta);
+            } elseif ($request->filled('fecha_desde')) {
                 $query->whereDate('created_at', '>=', $request->fecha_desde);
-            }
-            if ($request->filled('fecha_hasta')) {
+            } elseif ($request->filled('fecha_hasta')) {
                 $query->whereDate('created_at', '<=', $request->fecha_hasta);
             }
 
@@ -57,7 +69,15 @@ class MovementController extends Controller
                 });
             }
 
-            $movimientos = $query->orderBy('created_at', 'desc')->paginate(50);
+            // Select campos necesarios
+            $movimientos = $query->select([
+                'id', 'product_id', 'user_id', 'area_id', 'tipo',
+                'cantidad', 'stock_anterior', 'stock_posterior',
+                'motivo', 'observaciones', 'documento_referencia',
+                'fecha_movimiento', 'created_at', 'updated_at'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->paginate(50);
 
             return response()->json([
                 'status' => 'success',
@@ -73,13 +93,19 @@ class MovementController extends Controller
     }
 
     /**
-     * Obtener un movimiento específico
+     * Obtener un movimiento específico - Optimizado
      */
     public function show($id)
     {
         try {
-            $movimiento = Movement::with(['product.section.stockType', 'user'])
-                ->findOrFail($id);
+            $movimiento = Movement::with([
+                'product:id,codigo,nombre,unidad_medida,section_id',
+                'product.section:id,nombre,codigo,stock_type_id',
+                'product.section.stockType:id,nombre,codigo',
+                'user:id,nombre,email',
+                'area:id,nombre,codigo'
+            ])
+            ->findOrFail($id);
 
             return response()->json([
                 'status' => 'success',
@@ -95,7 +121,7 @@ class MovementController extends Controller
     }
 
     /**
-     * Obtener estadísticas de movimientos
+     * Obtener estadísticas de movimientos - Optimizado
      */
     public function estadisticas(Request $request)
     {
@@ -103,27 +129,38 @@ class MovementController extends Controller
             $query = Movement::query();
 
             // Filtros opcionales
-            if ($request->has('fecha_desde')) {
+            if ($request->filled('fecha_desde') && $request->filled('fecha_hasta')) {
+                $query->entreFechas($request->fecha_desde, $request->fecha_hasta);
+            } elseif ($request->filled('fecha_desde')) {
                 $query->whereDate('created_at', '>=', $request->fecha_desde);
-            }
-            if ($request->has('fecha_hasta')) {
+            } elseif ($request->filled('fecha_hasta')) {
                 $query->whereDate('created_at', '<=', $request->fecha_hasta);
             }
-            if ($request->has('stock_type_id')) {
+
+            if ($request->filled('stock_type_id')) {
                 $query->whereHas('product.section', function ($q) use ($request) {
                     $q->where('stock_type_id', $request->stock_type_id);
                 });
             }
 
+            // Estadísticas agrupadas en una sola consulta
+            $stats = (clone $query)
+                ->selectRaw('
+                    COUNT(*) as total_movimientos,
+                    SUM(CASE WHEN tipo = "ENTRADA" THEN 1 ELSE 0 END) as entradas,
+                    SUM(CASE WHEN tipo = "SALIDA" THEN 1 ELSE 0 END) as salidas,
+                    SUM(CASE WHEN tipo = "AJUSTE" THEN 1 ELSE 0 END) as ajustes
+                ')
+                ->first();
+
             $estadisticas = [
-                'total_movimientos' => $query->count(),
-                'entradas' => (clone $query)->where('tipo', 'ENTRADA')->count(),
-                'salidas' => (clone $query)->where('tipo', 'SALIDA')->count(),
-                'ajustes' => (clone $query)->where('tipo', 'AJUSTE')->count(),
-                'movimientos_recientes' => Movement::with(['product:id,codigo,nombre', 'user:id,nombre'])
-                    ->orderBy('created_at', 'desc')
-                    ->limit(10)
-                    ->get(),
+                'total_movimientos' => $stats->total_movimientos ?? 0,
+                'entradas' => $stats->entradas ?? 0,
+                'salidas' => $stats->salidas ?? 0,
+                'ajustes' => $stats->ajustes ?? 0,
+                'movimientos_recientes' => Movement::conRelaciones()
+                    ->recientes(10)
+                    ->get(['id', 'product_id', 'user_id', 'tipo', 'cantidad', 'motivo', 'created_at'])
             ];
 
             return response()->json([

@@ -18,14 +18,14 @@ class ProductExampleSeeder extends Seeder
     {
         // Obtener secciones
         $secciones = Section::all()->keyBy('codigo');
-        
+
         // Obtener usuario admin para los movimientos
         $admin = User::first();
 
         // ========================================
         // PRODUCTOS - Artículos de Oficina (ASSOF)
         // ========================================
-        
+
         // Producto 1: Lapicero azul (Stock normal)
         $lapicero = Product::create([
             'section_id' => $secciones['ASSOF']->id,
@@ -51,6 +51,7 @@ class ProductExampleSeeder extends Seeder
             'stock_posterior' => 100,
             'motivo' => 'Compra inicial',
             'observaciones' => 'Stock inicial del sistema',
+            'fecha_movimiento' => now()->subDays(30),
         ]);
 
         Movement::create([
@@ -62,6 +63,7 @@ class ProductExampleSeeder extends Seeder
             'stock_posterior' => 150,
             'motivo' => 'Compra mensual',
             'observaciones' => 'Proveedor: Librería San José',
+            'fecha_movimiento' => now()->subDays(15),
         ]);
 
         // Producto 2: Corrector líquido
@@ -88,6 +90,7 @@ class ProductExampleSeeder extends Seeder
             'stock_posterior' => 30,
             'motivo' => 'Compra inicial',
             'observaciones' => 'Stock inicial del sistema',
+            'fecha_movimiento' => now()->subDays(30),
         ]);
 
         // Producto 3: Grapas (Stock bajo - para alertas)
@@ -113,6 +116,7 @@ class ProductExampleSeeder extends Seeder
             'stock_anterior' => 0,
             'stock_posterior' => 50,
             'motivo' => 'Compra inicial',
+            'fecha_movimiento' => now()->subDays(60),
         ]);
 
         Movement::create([
@@ -124,6 +128,7 @@ class ProductExampleSeeder extends Seeder
             'stock_posterior' => 5,
             'motivo' => 'Entrega a departamentos',
             'observaciones' => 'Distribución trimestral',
+            'fecha_movimiento' => now()->subDays(10),
         ]);
 
         // Producto 4: Papel bond
@@ -144,7 +149,7 @@ class ProductExampleSeeder extends Seeder
         // ========================================
         // PRODUCTOS - Artículos de Limpieza (ASSAL)
         // ========================================
-        
+
         // Producto 5: Desinfectante (Stock bajo)
         $desinfectante = Product::create([
             'section_id' => $secciones['ASSAL']->id,
@@ -168,6 +173,7 @@ class ProductExampleSeeder extends Seeder
             'stock_anterior' => 0,
             'stock_posterior' => 20,
             'motivo' => 'Compra inicial',
+            'fecha_movimiento' => now()->subDays(45),
         ]);
 
         Movement::create([
@@ -179,6 +185,7 @@ class ProductExampleSeeder extends Seeder
             'stock_posterior' => 3,
             'motivo' => 'Entrega a servicios de limpieza',
             'observaciones' => 'Consumo mensual',
+            'fecha_movimiento' => now()->subDays(5),
         ]);
 
         // Producto 6: Lejía
@@ -214,7 +221,7 @@ class ProductExampleSeeder extends Seeder
         // ========================================
         // PRODUCTOS - Consumibles (ASSC)
         // ========================================
-        
+
         Product::create([
             'section_id' => $secciones['ASSC']->id,
             'codigo' => 'ASSC-0010',
@@ -246,7 +253,7 @@ class ProductExampleSeeder extends Seeder
         // ========================================
         // PRODUCTOS - Letreros (ASSSP)
         // ========================================
-        
+
         Product::create([
             'section_id' => $secciones['ASSSP']->id,
             'codigo' => 'ASSSP-0001',
@@ -278,7 +285,7 @@ class ProductExampleSeeder extends Seeder
         // ========================================
         // PRODUCTOS - Letreros de Aforo (ASSAF)
         // ========================================
-        
+
         Product::create([
             'section_id' => $secciones['ASSAF']->id,
             'codigo' => 'ASSAF-0001',
@@ -296,7 +303,7 @@ class ProductExampleSeeder extends Seeder
         // ========================================
         // PRODUCTOS - Tópico (CAJA 01-06)
         // ========================================
-        
+
         // Productos con vencimiento en Tópico
         $alcohol = Product::create([
             'section_id' => $secciones['CAJA 01']->id,
@@ -322,6 +329,7 @@ class ProductExampleSeeder extends Seeder
             'stock_posterior' => 18,
             'motivo' => 'Compra mensual',
             'observaciones' => 'Lote: AB12345, Venc: 31/12/2027',
+            'fecha_movimiento' => now()->subDays(20),
         ]);
 
         Product::create([
@@ -371,7 +379,7 @@ class ProductExampleSeeder extends Seeder
         // ========================================
         // PRODUCTOS - Tachos (ASSTC)
         // ========================================
-        
+
         Product::create([
             'section_id' => $secciones['ASSTC']->id,
             'codigo' => 'ASSTC-0001',
@@ -389,7 +397,7 @@ class ProductExampleSeeder extends Seeder
         // ========================================
         // PRODUCTOS - Materiales Básicos (ASSMB)
         // ========================================
-        
+
         Product::create([
             'section_id' => $secciones['ASSMB']->id,
             'codigo' => 'ASSMB-0001',

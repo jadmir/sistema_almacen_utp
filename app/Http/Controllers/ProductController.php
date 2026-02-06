@@ -17,7 +17,8 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Product::with(['section.stockType']);
+            // Query optimizada con eager loading selectivo
+            $query = Product::conRelaciones();
 
             // Filtro por sección (solo si tiene valor)
             if ($request->filled('section_id')) {
@@ -31,18 +32,14 @@ class ProductController extends Controller
                 });
             }
 
-            // Filtro por búsqueda (nombre o código)
+            // Filtro por búsqueda usando scope
             if ($request->filled('search')) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('nombre', 'like', "%{$search}%")
-                      ->orWhere('codigo', 'like', "%{$search}%");
-                });
+                $query->buscar($request->search);
             }
 
-            // Filtro por stock bajo
+            // Filtro por stock bajo usando scope
             if ($request->filled('stock_bajo') && filter_var($request->stock_bajo, FILTER_VALIDATE_BOOLEAN)) {
-                $query->whereRaw('stock_actual <= stock_minimo');
+                $query->stockBajo();
             }
 
             // Filtro por estado
@@ -52,8 +49,16 @@ class ProductController extends Controller
 
             // Obtener número de items por página (por defecto 10, máximo 100)
             $perPage = min($request->input('per_page', 10), 100);
-            
-            $productos = $query->orderBy('codigo', 'asc')->paginate($perPage);
+
+            // Select solo campos necesarios
+            $productos = $query->select([
+                'id', 'section_id', 'codigo', 'nombre', 'descripcion',
+                'unidad_medida', 'stock_actual', 'stock_minimo', 'stock_maximo',
+                'tiene_vencimiento', 'fecha_vencimiento', 'ubicacion', 'estado',
+                'created_at', 'updated_at'
+            ])
+            ->orderBy('codigo', 'asc')
+            ->paginate($perPage);
 
             return response()->json([
                 'status' => 'success',
@@ -97,13 +102,13 @@ class ProductController extends Controller
 
             // Obtener la sección para generar el código
             $section = Section::findOrFail($request->section_id);
-            
+
             // Buscar el último producto de esta sección para generar el correlativo
             $lastProduct = Product::where('section_id', $request->section_id)
                 ->where('codigo', 'like', $section->codigo . '-%')
                 ->orderBy('codigo', 'desc')
                 ->first();
-            
+
             // Generar el nuevo número correlativo
             if ($lastProduct) {
                 // Extraer el número del último código (ej: "ASSOF-0089" -> 89)
@@ -112,14 +117,14 @@ class ProductController extends Controller
             } else {
                 $newNumber = 1;
             }
-            
+
             // Generar el código completo (ej: "ASSOF-0001")
             $codigo = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
-            
+
             // Crear el producto con el código generado
             $data = $request->all();
             $data['codigo'] = $codigo;
-            
+
             $producto = Product::create($data);
 
             return response()->json([
@@ -142,8 +147,17 @@ class ProductController extends Controller
     public function show($id)
     {
         try {
-            $producto = Product::with(['section.stockType', 'movements.user'])
-                ->findOrFail($id);
+            $producto = Product::with([
+                'section:id,nombre,codigo,stock_type_id',
+                'section.stockType:id,nombre,codigo',
+                'movements' => function ($query) {
+                    $query->select('id', 'product_id', 'user_id', 'area_id', 'tipo', 'cantidad', 'stock_anterior', 'stock_posterior', 'motivo', 'observaciones', 'fecha_movimiento', 'created_at')
+                          ->with(['user:id,nombre,email', 'area:id,nombre,codigo'])
+                          ->orderBy('created_at', 'desc')
+                          ->limit(20); // Limitar movimientos recientes
+                }
+            ])
+            ->findOrFail($id);
 
             return response()->json([
                 'status' => 'success',
@@ -503,13 +517,13 @@ class ProductController extends Controller
     {
         try {
             $section = Section::findOrFail($sectionId);
-            
+
             // Buscar el último producto de esta sección
             $lastProduct = Product::where('section_id', $sectionId)
                 ->where('codigo', 'like', $section->codigo . '-%')
                 ->orderBy('codigo', 'desc')
                 ->first();
-            
+
             // Generar el nuevo número correlativo
             if ($lastProduct) {
                 $lastNumber = intval(substr($lastProduct->codigo, strlen($section->codigo) + 1));
@@ -517,10 +531,10 @@ class ProductController extends Controller
             } else {
                 $newNumber = 1;
             }
-            
+
             // Generar el código completo
             $nextCode = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -572,7 +586,7 @@ class ProductController extends Controller
             foreach ($request->productos as $index => $item) {
                 try {
                     $producto = Product::findOrFail($item['product_id']);
-                    
+
                     $stockAnterior = $producto->stock_actual;
                     $stockNuevo = $stockAnterior + $item['cantidad'];
 
@@ -700,7 +714,7 @@ class ProductController extends Controller
 
             foreach ($request->productos as $item) {
                 $producto = Product::findOrFail($item['product_id']);
-                
+
                 $stockAnterior = $producto->stock_actual;
                 $stockNuevo = $stockAnterior - $item['cantidad'];
 
@@ -796,7 +810,7 @@ class ProductController extends Controller
 
             foreach ($request->productos as $item) {
                 $producto = Product::findOrFail($item['product_id']);
-                
+
                 $stockAnterior = $producto->stock_actual;
                 $stockNuevo = $item['stock_nuevo'];
                 $diferencia = $stockNuevo - $stockAnterior;
