@@ -14,6 +14,7 @@ class Product extends Model
 
     protected $fillable = [
         'section_id',
+        'deposito_id',
         'codigo',
         'nombre',
         'descripcion',
@@ -42,6 +43,14 @@ class Product extends Model
     public function section(): BelongsTo
     {
         return $this->belongsTo(Section::class);
+    }
+
+    /**
+     * Relación con depósito
+     */
+    public function deposito(): BelongsTo
+    {
+        return $this->belongsTo(Deposito::class);
     }
 
     /**
@@ -132,6 +141,10 @@ class Product extends Model
      */
     public function scopeConRelaciones($query)
     {
-        return $query->with(['section:id,nombre,codigo,stock_type_id', 'section.stockType:id,nombre,codigo_prefix']);
+        return $query->with([
+            'section:id,nombre,codigo,stock_type_id', 
+            'section.stockType:id,nombre,codigo_prefix',
+            'deposito:id,nombre'
+        ]);
     }
 }

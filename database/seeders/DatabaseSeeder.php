@@ -40,6 +40,9 @@ class DatabaseSeeder extends Seeder
         // Crear sistema de inventario
         $this->call(StockSystemSeeder::class);
         
+        // Crear depósitos
+        $this->call(DepositoSeeder::class);
+        
         // Crear áreas
         $this->call(AreaSeeder::class);
         

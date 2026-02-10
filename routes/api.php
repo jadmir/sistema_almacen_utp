@@ -14,6 +14,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AreaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PlantillaEntregaController;
+use App\Http\Controllers\DepositoController;
 
 // ========================================
 // RUTAS PÚBLICAS
@@ -94,6 +95,14 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('sections/{id}', [SectionController::class, 'show'])->middleware('permission:inventario.ver');
     Route::put('sections/{id}', [SectionController::class, 'update'])->middleware('permission:inventario.editar');
     Route::delete('sections/{id}', [SectionController::class, 'destroy'])->middleware('permission:inventario.eliminar');
+
+    // Depósitos (Ubicaciones de almacenamiento)
+    Route::get('depositos/activos', [DepositoController::class, 'activos'])->middleware('permission:inventario.ver');
+    Route::get('depositos', [DepositoController::class, 'index'])->middleware('permission:inventario.ver');
+    Route::post('depositos', [DepositoController::class, 'store'])->middleware('permission:inventario.crear');
+    Route::get('depositos/{id}', [DepositoController::class, 'show'])->middleware('permission:inventario.ver');
+    Route::put('depositos/{id}', [DepositoController::class, 'update'])->middleware('permission:inventario.editar');
+    Route::delete('depositos/{id}', [DepositoController::class, 'destroy'])->middleware('permission:inventario.eliminar');
 
     // Productos
     Route::get('products/alertas/stock-bajo', [ProductController::class, 'productosStockBajo'])->middleware('permission:inventario.ver');

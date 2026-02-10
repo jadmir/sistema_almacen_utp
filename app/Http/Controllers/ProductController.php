@@ -52,7 +52,7 @@ class ProductController extends Controller
 
             // Select solo campos necesarios
             $productos = $query->select([
-                'id', 'section_id', 'codigo', 'nombre', 'descripcion',
+                'id', 'section_id', 'deposito_id', 'codigo', 'nombre', 'descripcion',
                 'unidad_medida', 'stock_actual', 'stock_minimo', 'stock_maximo',
                 'tiene_vencimiento', 'fecha_vencimiento', 'ubicacion', 'estado',
                 'created_at', 'updated_at'
@@ -81,6 +81,7 @@ class ProductController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'section_id' => 'required|exists:sections,id',
+                'deposito_id' => 'nullable|exists:depositos,id',
                 'nombre' => 'required|string|max:255',
                 'descripcion' => 'nullable|string',
                 'stock_actual' => 'required|integer|min:0',
@@ -182,6 +183,7 @@ class ProductController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'section_id' => 'sometimes|required|exists:sections,id',
+                'deposito_id' => 'nullable|exists:depositos,id',
                 'codigo' => 'sometimes|required|string|max:50|unique:products,codigo,' . $id,
                 'nombre' => 'sometimes|required|string|max:255',
                 'descripcion' => 'nullable|string',
