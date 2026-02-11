@@ -115,20 +115,21 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 10%;">Código</th>
-                <th style="width: 28%;">Producto</th>
-                <th style="width: 15%;">Sección</th>
-                <th style="width: 8%;" class="text-right">Stock Actual</th>
-                <th style="width: 8%;" class="text-right">Stock Mín.</th>
-                <th style="width: 7%;">Unidad</th>
-                <th style="width: 12%;" class="text-center">Nivel</th>
-                <th style="width: 12%;" class="text-center">Estado</th>
+                <th style="width: 9%;">Código</th>
+                <th style="width: 24%;">Producto</th>
+                <th style="width: 13%;">Sección</th>
+                <th style="width: 17%;">Depósito</th>
+                <th style="width: 7%;" class="text-right">Stock Actual</th>
+                <th style="width: 7%;" class="text-right">Stock Mín.</th>
+                <th style="width: 6%;">Unidad</th>
+                <th style="width: 10%;" class="text-center">Nivel</th>
+                <th style="width: 7%;" class="text-center">Estado</th>
             </tr>
         </thead>
         <tbody>
             @foreach($productos as $producto)
             @php
-                $porcentaje = $producto->stock_minimo > 0 
+                $porcentaje = $producto->stock_minimo > 0
                     ? round(($producto->stock_actual / $producto->stock_minimo) * 100, 1)
                     : 0;
                 $color = $producto->stock_actual == 0 ? '#dc3545' : '#ffc107';
@@ -137,6 +138,7 @@
                 <td><strong>{{ $producto->codigo }}</strong></td>
                 <td>{{ $producto->nombre }}</td>
                 <td>{{ $producto->section->nombre }}</td>
+                <td>{{ $producto->deposito ? $producto->deposito->nombre : 'Sin depósito' }}</td>
                 <td class="text-right"><strong>{{ $producto->stock_actual }}</strong></td>
                 <td class="text-right">{{ $producto->stock_minimo }}</td>
                 <td>{{ $producto->unidad_medida }}</td>

@@ -14,24 +14,48 @@ use PhpOffice\PhpSpreadsheet\Style\Color;
 
 class StockBajoReportExport implements FromCollection, WithHeadings, WithStyles, WithColumnWidths, WithTitle
 {
+    protected $filters;
+
+    public function __construct($filters = [])
+    {
+        $this->filters = $filters;
+    }
+
     public function collection()
     {
-        return Product::with(['section.stockType'])
+        $query = Product::with(['section.stockType', 'deposito'])
             ->whereRaw('stock_actual <= stock_minimo')
-            ->where('estado', true)
-            ->orderBy('stock_actual', 'asc')
+            ->where('estado', true);
+
+        // Aplicar filtros
+        if (!empty($this->filters['section_id'])) {
+            $query->where('section_id', $this->filters['section_id']);
+        }
+
+        if (!empty($this->filters['stock_type_id'])) {
+            $query->whereHas('section', function ($q) {
+                $q->where('stock_type_id', $this->filters['stock_type_id']);
+            });
+        }
+
+        if (!empty($this->filters['deposito_id'])) {
+            $query->where('deposito_id', $this->filters['deposito_id']);
+        }
+
+        return $query->orderBy('stock_actual', 'asc')
             ->get()
             ->map(function ($product) {
                 $diferencia = $product->stock_minimo - $product->stock_actual;
-                $porcentaje = $product->stock_minimo > 0 
-                    ? round(($product->stock_actual / $product->stock_minimo) * 100, 1) 
+                $porcentaje = $product->stock_minimo > 0
+                    ? round(($product->stock_actual / $product->stock_minimo) * 100, 1)
                     : 0;
-                
+
                 return [
                     $product->codigo,
                     $product->nombre,
                     $product->section->nombre,
                     $product->section->stockType->nombre,
+                    $product->deposito ? $product->deposito->nombre : 'Sin depósito',
                     $product->stock_actual,
                     $product->stock_minimo,
                     $diferencia,
@@ -42,7 +66,7 @@ class StockBajoReportExport implements FromCollection, WithHeadings, WithStyles,
                 ];
             });
     }
-    
+
     public function headings(): array
     {
         return [
@@ -50,6 +74,7 @@ class StockBajoReportExport implements FromCollection, WithHeadings, WithStyles,
             'Producto',
             'Sección',
             'Tipo de Stock',
+            'Depósito',
             'Stock Actual',
             'Stock Mínimo',
             'Faltante',
@@ -59,7 +84,7 @@ class StockBajoReportExport implements FromCollection, WithHeadings, WithStyles,
             'Prioridad',
         ];
     }
-    
+
     public function styles(Worksheet $sheet)
     {
         return [
@@ -69,7 +94,7 @@ class StockBajoReportExport implements FromCollection, WithHeadings, WithStyles,
             ],
         ];
     }
-    
+
     public function columnWidths(): array
     {
         return [
@@ -77,16 +102,17 @@ class StockBajoReportExport implements FromCollection, WithHeadings, WithStyles,
             'B' => 40,
             'C' => 25,
             'D' => 25,
-            'E' => 12,
+            'E' => 35,
             'F' => 12,
             'G' => 12,
             'H' => 12,
             'I' => 12,
-            'J' => 20,
-            'K' => 15,
+            'J' => 12,
+            'K' => 20,
+            'L' => 15,
         ];
     }
-    
+
     public function title(): string
     {
         return 'Alertas - Stock Bajo';

@@ -15,36 +15,51 @@ use Carbon\Carbon;
 class ProximosVencerReportExport implements FromCollection, WithHeadings, WithStyles, WithColumnWidths, WithTitle
 {
     protected $dias;
-    
-    public function __construct($dias = 30)
+    protected $sectionId;
+    protected $depositoId;
+
+    public function __construct($dias = 30, $sectionId = null, $depositoId = null)
     {
         $this->dias = $dias;
+        $this->sectionId = $sectionId;
+        $this->depositoId = $depositoId;
     }
-    
+
     public function collection()
     {
-        return Product::with(['section.stockType'])
+        $query = Product::with(['section.stockType', 'deposito'])
             ->where('tiene_vencimiento', true)
             ->whereNotNull('fecha_vencimiento')
             ->where('fecha_vencimiento', '<=', now()->addDays($this->dias))
             ->where('fecha_vencimiento', '>=', now())
-            ->where('estado', true)
-            ->orderBy('fecha_vencimiento', 'asc')
+            ->where('estado', true);
+
+        // Aplicar filtros
+        if ($this->sectionId) {
+            $query->where('section_id', $this->sectionId);
+        }
+
+        if ($this->depositoId) {
+            $query->where('deposito_id', $this->depositoId);
+        }
+
+        return $query->orderBy('fecha_vencimiento', 'asc')
             ->get()
             ->map(function ($product) {
                 $diasRestantes = now()->diffInDays($product->fecha_vencimiento, false);
-                
+
                 $urgencia = match(true) {
                     $diasRestantes <= 7 => '🔴 CRÍTICO',
                     $diasRestantes <= 15 => '🟠 URGENTE',
                     $diasRestantes <= 30 => '🟡 PRÓXIMO',
                     default => '🟢 NORMAL'
                 };
-                
+
                 return [
                     $product->codigo,
                     $product->nombre,
                     $product->section->nombre,
+                    $product->deposito ? $product->deposito->nombre : 'Sin depósito',
                     $product->stock_actual,
                     $product->unidad_medida,
                     $product->fecha_vencimiento->format('d/m/Y'),
@@ -54,13 +69,14 @@ class ProximosVencerReportExport implements FromCollection, WithHeadings, WithSt
                 ];
             });
     }
-    
+
     public function headings(): array
     {
         return [
             'Código',
             'Producto',
             'Sección',
+            'Depósito',
             'Stock Actual',
             'Unidad',
             'Fecha Vencimiento',
@@ -69,7 +85,7 @@ class ProximosVencerReportExport implements FromCollection, WithHeadings, WithSt
             'Ubicación',
         ];
     }
-    
+
     public function styles(Worksheet $sheet)
     {
         return [
@@ -79,22 +95,23 @@ class ProximosVencerReportExport implements FromCollection, WithHeadings, WithSt
             ],
         ];
     }
-    
+
     public function columnWidths(): array
     {
         return [
             'A' => 15,
             'B' => 40,
             'C' => 25,
-            'D' => 12,
+            'D' => 35,
             'E' => 12,
-            'F' => 18,
-            'G' => 15,
+            'F' => 12,
+            'G' => 18,
             'H' => 15,
-            'I' => 20,
+            'I' => 15,
+            'J' => 20,
         ];
     }
-    
+
     public function title(): string
     {
         return 'Próximos a Vencer - ' . $this->dias . ' días';

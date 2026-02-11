@@ -92,14 +92,15 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 10%;">Código</th>
-                <th style="width: 28%;">Producto</th>
-                <th style="width: 15%;">Sección</th>
-                <th style="width: 12%;">Tipo Stock</th>
-                <th style="width: 8%;" class="text-right">Stock</th>
-                <th style="width: 7%;">Unidad</th>
-                <th style="width: 12%;" class="text-center">Fecha Venc.</th>
-                <th style="width: 8%;" class="text-center">Días Venc.</th>
+                <th style="width: 9%;">Código</th>
+                <th style="width: 24%;">Producto</th>
+                <th style="width: 12%;">Sección</th>
+                <th style="width: 11%;">Tipo Stock</th>
+                <th style="width: 16%;">Depósito</th>
+                <th style="width: 7%;" class="text-right">Stock</th>
+                <th style="width: 6%;">Unidad</th>
+                <th style="width: 10%;" class="text-center">Fecha Venc.</th>
+                <th style="width: 5%;" class="text-center">Días Venc.</th>
             </tr>
         </thead>
         <tbody>
@@ -112,6 +113,7 @@
                 <td>{{ $producto->nombre }}</td>
                 <td>{{ $producto->section->nombre }}</td>
                 <td>{{ $producto->section->stockType->nombre }}</td>
+                <td>{{ $producto->deposito ? $producto->deposito->nombre : 'Sin depósito' }}</td>
                 <td class="text-right"><strong>{{ $producto->stock_actual }}</strong></td>
                 <td>{{ $producto->unidad_medida }}</td>
                 <td class="text-center">{{ $producto->fecha_vencimiento->format('d/m/Y') }}</td>

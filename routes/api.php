@@ -25,7 +25,7 @@ Route::post('login', [AuthController::class, 'login']);
 // RUTAS PROTEGIDAS CON JWT
 // ========================================
 Route::middleware(['jwt.auth'])->group(function () {
-    
+
     // Autenticación
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('me', [AuthController::class, 'me']);
@@ -46,12 +46,12 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('usuarios/{usuario}', [UsuarioController::class, 'show'])->middleware('permission:usuarios.ver');
     Route::put('usuarios/{usuario}', [UsuarioController::class, 'update'])->middleware('permission:usuarios.editar');
     Route::delete('usuarios/{usuario}', [UsuarioController::class, 'destroy'])->middleware('permission:usuarios.eliminar');
-    
+
     // Permisos de usuario
     Route::get('usuarios/{id}/permisos', [UsuarioController::class, 'getUserPermissions'])->middleware('permission:usuarios.ver');
     Route::post('usuarios/{id}/permisos', [UsuarioController::class, 'assignPermissions'])->middleware('role:Admin');
     Route::delete('usuarios/{userId}/permisos/{permissionId}', [UsuarioController::class, 'removePermission'])->middleware('role:Admin');
-    
+
     // Usuarios eliminados
     Route::get('usuarios-eliminados', [UsuarioController::class, 'trashed'])->middleware('role:Admin');
     Route::post('usuarios/{id}/restaurar', [UsuarioController::class, 'restore'])->middleware('role:Admin');
@@ -65,7 +65,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('roles/{role}', [RoleController::class, 'show'])->middleware('permission:roles.ver');
     Route::put('roles/{role}', [RoleController::class, 'update'])->middleware('permission:roles.editar');
     Route::delete('roles/{role}', [RoleController::class, 'destroy'])->middleware('permission:roles.eliminar');
-    
+
     // Permisos de rol
     Route::get('roles/{roleId}/permisos', [PermissionController::class, 'getRolePermissions'])->middleware('permission:roles.ver');
     Route::post('roles/{roleId}/permisos', [PermissionController::class, 'assignToRole'])->middleware('role:Admin');
@@ -81,7 +81,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     // ========================================
     // SISTEMA DE INVENTARIO
     // ========================================
-    
+
     // Tipos de Stock (Stock de Productos, Letreros, Tópico)
     Route::get('stock-types', [StockTypeController::class, 'index'])->middleware('permission:inventario.ver');
     Route::post('stock-types', [StockTypeController::class, 'store'])->middleware('permission:inventario.crear');
@@ -113,23 +113,23 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('products/{id}', [ProductController::class, 'show'])->middleware('permission:inventario.ver');
     Route::put('products/{id}', [ProductController::class, 'update'])->middleware('permission:inventario.editar');
     Route::delete('products/{id}', [ProductController::class, 'destroy'])->middleware('permission:inventario.eliminar');
-    
+
     // Movimientos de Stock (Individual)
     Route::post('products/{id}/entrada', [ProductController::class, 'registrarEntrada'])->middleware('permission:inventario.entrada');
     Route::post('products/{id}/salida', [ProductController::class, 'registrarSalida'])->middleware('permission:inventario.salida');
     Route::post('products/{id}/ajuste', [ProductController::class, 'registrarAjuste'])->middleware('permission:inventario.ajustar');
-    
+
     // Movimientos de Stock (Masivo)
     Route::post('products/entrada-masiva', [ProductController::class, 'registrarEntradaMasiva'])->middleware('permission:inventario.entrada');
     Route::post('products/salida-masiva', [ProductController::class, 'registrarSalidaMasiva'])->middleware('permission:inventario.salida');
     Route::post('products/ajuste-masivo', [ProductController::class, 'registrarAjusteMasivo'])->middleware('permission:inventario.ajustar');
 
-    
+
     // Movimientos (Historial general)
     Route::get('movements', [MovementController::class, 'index'])->middleware('permission:inventario.ver');
     Route::get('movements/{id}', [MovementController::class, 'show'])->middleware('permission:inventario.ver');
     Route::get('movements/estadisticas/general', [MovementController::class, 'estadisticas'])->middleware('permission:inventario.ver');
-    
+
     // ========================================
     // ÁREAS
     // ========================================
@@ -139,7 +139,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('areas/{id}', [AreaController::class, 'show'])->middleware('permission:inventario.ver');
     Route::put('areas/{id}', [AreaController::class, 'update'])->middleware('permission:inventario.editar');
     Route::delete('areas/{id}', [AreaController::class, 'destroy'])->middleware('permission:inventario.eliminar');
-    
+
     // ========================================
     // REPORTES EN EXCEL
     // ========================================
@@ -151,7 +151,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('reportes/kardex', [ReportController::class, 'kardex'])->middleware('permission:inventario.ver');
     Route::get('reportes/tipo-stock', [ReportController::class, 'tipoStock'])->middleware('permission:inventario.ver');
     Route::get('reportes/seccion', [ReportController::class, 'seccion'])->middleware('permission:inventario.ver');
-    
+
     // ========================================
     // REPORTES EN PDF
     // ========================================
@@ -162,7 +162,12 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('reportes/pdf/movimientos', [ReportController::class, 'movimientosPdf'])->middleware('permission:inventario.ver');
     Route::get('reportes/pdf/kardex', [ReportController::class, 'kardexPdf'])->middleware('permission:inventario.ver');
     Route::get('reportes/pdf/seccion', [ReportController::class, 'seccionPdf'])->middleware('permission:inventario.ver');
-    
+
+    // Vales de cargo
+    Route::get('reportes/pdf/vale-cargo/{movementId}', [ReportController::class, 'valeCargoPdf'])->middleware('permission:inventario.ver');
+    Route::get('vales-cargo', [ReportController::class, 'listarVales'])->middleware('permission:inventario.ver');
+    Route::get('vales-cargo/{movementId}/descargar', [ReportController::class, 'descargarVale'])->middleware('permission:inventario.ver');
+
     // ========================================
     // PLANTILLAS DE ENTREGAS MENSUALES
     // ========================================

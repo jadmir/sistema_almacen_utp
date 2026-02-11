@@ -22,6 +22,13 @@ class Movement extends Model
         'observaciones',
         'documento_referencia',
         'fecha_movimiento',
+        // Campos para vale de cargo
+        'numero_vale',
+        'recibido_por',
+        'dni_receptor',
+        'cargo_receptor',
+        'observaciones_receptor',
+        'pdf_path',
     ];
 
     protected $casts = [

@@ -321,6 +321,11 @@ class ProductController extends Controller
                 'area_id' => 'required|exists:areas,id',
                 'observaciones' => 'nullable|string',
                 'fecha_movimiento' => 'required|date|before_or_equal:today',
+                // Campos para vale de cargo
+                'recibido_por' => 'required|string|max:255',
+                'dni_receptor' => 'required|string|max:20',
+                'cargo_receptor' => 'required|string|max:100',
+                'observaciones_receptor' => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
@@ -348,13 +353,16 @@ class ProductController extends Controller
             $stockAnterior = $producto->stock_actual;
             $stockNuevo = $stockAnterior - $request->cantidad;
 
+            // Generar número de vale único
+            $numeroVale = $this->generarNumeroVale();
+
             // Actualizar stock
             $producto->stock_actual = $stockNuevo;
             $producto->save();
 
-            // Registrar movimiento con área
+            // Registrar movimiento con área y datos del vale
             $jwtUser = $request->attributes->get('jwt_user');
-            Movement::create([
+            $movimiento = Movement::create([
                 'product_id' => $producto->id,
                 'user_id' => $jwtUser->user_id,
                 'area_id' => $request->area_id,
@@ -365,6 +373,12 @@ class ProductController extends Controller
                 'motivo' => $request->motivo,
                 'observaciones' => $request->observaciones,
                 'fecha_movimiento' => $request->fecha_movimiento,
+                // Datos del vale de cargo
+                'numero_vale' => $numeroVale,
+                'recibido_por' => $request->recibido_por,
+                'dni_receptor' => $request->dni_receptor,
+                'cargo_receptor' => $request->cargo_receptor,
+                'observaciones_receptor' => $request->observaciones_receptor,
             ]);
 
             DB::commit();
@@ -373,6 +387,8 @@ class ProductController extends Controller
                 'status' => 'success',
                 'message' => 'Salida de stock registrada exitosamente',
                 'data' => [
+                    'movimiento_id' => $movimiento->id,
+                    'numero_vale' => $numeroVale,
                     'producto' => $producto->load('section.stockType'),
                     'stock_anterior' => $stockAnterior,
                     'stock_actual' => $stockNuevo,
@@ -388,6 +404,26 @@ class ProductController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Generar número de vale único (formato: VC-YYYY-NNNN)
+     */
+    private function generarNumeroVale()
+    {
+        $year = date('Y');
+        $lastVale = Movement::where('numero_vale', 'like', "VC-{$year}-%")
+            ->orderBy('numero_vale', 'desc')
+            ->first();
+
+        if ($lastVale) {
+            $lastNumber = (int) substr($lastVale->numero_vale, -4);
+            $newNumber = $lastNumber + 1;
+        } else {
+            $newNumber = 1;
+        }
+
+        return sprintf('VC-%s-%04d', $year, $newNumber);
     }
 
     /**

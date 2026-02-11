@@ -92,7 +92,7 @@
         <strong>⚠️ ATENCIÓN:</strong> {{ $productos->count() }} producto(s) próximos a vencer en los siguientes {{ $dias }} días.
         @if($productos->filter(function($p) { return \Carbon\Carbon::now()->diffInDays($p->fecha_vencimiento, false) <= 7; })->count() > 0)
             <br><strong style="color: #dc3545;">
-                {{ $productos->filter(function($p) { return \Carbon\Carbon::now()->diffInDays($p->fecha_vencimiento, false) <= 7; })->count() }} 
+                {{ $productos->filter(function($p) { return \Carbon\Carbon::now()->diffInDays($p->fecha_vencimiento, false) <= 7; })->count() }}
                 producto(s) URGENTE (7 días o menos).
             </strong>
         @endif
@@ -101,14 +101,15 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 10%;">Código</th>
-                <th style="width: 28%;">Producto</th>
-                <th style="width: 15%;">Sección</th>
-                <th style="width: 8%;" class="text-right">Stock</th>
-                <th style="width: 7%;">Unidad</th>
-                <th style="width: 12%;" class="text-center">Fecha Venc.</th>
-                <th style="width: 10%;" class="text-center">Días Rest.</th>
-                <th style="width: 10%;" class="text-center">Urgencia</th>
+                <th style="width: 9%;">Código</th>
+                <th style="width: 24%;">Producto</th>
+                <th style="width: 13%;">Sección</th>
+                <th style="width: 17%;">Depósito</th>
+                <th style="width: 7%;" class="text-right">Stock</th>
+                <th style="width: 6%;">Unidad</th>
+                <th style="width: 11%;" class="text-center">Fecha Venc.</th>
+                <th style="width: 8%;" class="text-center">Días Rest.</th>
+                <th style="width: 5%;" class="text-center">Urgencia</th>
             </tr>
         </thead>
         <tbody>
@@ -121,6 +122,7 @@
                 <td><strong>{{ $producto->codigo }}</strong></td>
                 <td>{{ $producto->nombre }}</td>
                 <td>{{ $producto->section->nombre }}</td>
+                <td>{{ $producto->deposito ? $producto->deposito->nombre : 'Sin depósito' }}</td>
                 <td class="text-right"><strong>{{ $producto->stock_actual }}</strong></td>
                 <td>{{ $producto->unidad_medida }}</td>
                 <td class="text-center">{{ $producto->fecha_vencimiento->format('d/m/Y') }}</td>

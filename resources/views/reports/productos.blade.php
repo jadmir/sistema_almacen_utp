@@ -100,14 +100,15 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 10%;">Código</th>
-                <th style="width: 25%;">Producto</th>
-                <th style="width: 15%;">Sección</th>
-                <th style="width: 12%;">Tipo Stock</th>
-                <th style="width: 8%;" class="text-right">Stock</th>
-                <th style="width: 8%;" class="text-right">Mínimo</th>
-                <th style="width: 8%;">Unidad</th>
-                <th style="width: 14%;" class="text-center">Estado Stock</th>
+                <th style="width: 9%;">Código</th>
+                <th style="width: 22%;">Producto</th>
+                <th style="width: 13%;">Sección</th>
+                <th style="width: 11%;">Tipo Stock</th>
+                <th style="width: 18%;">Depósito</th>
+                <th style="width: 7%;" class="text-right">Stock</th>
+                <th style="width: 7%;" class="text-right">Mínimo</th>
+                <th style="width: 6%;">Unidad</th>
+                <th style="width: 7%;" class="text-center">Estado</th>
             </tr>
         </thead>
         <tbody>
@@ -117,6 +118,7 @@
                 <td>{{ $producto->nombre }}</td>
                 <td>{{ $producto->section->nombre }}</td>
                 <td>{{ $producto->section->stockType->nombre }}</td>
+                <td>{{ $producto->deposito ? $producto->deposito->nombre : 'Sin depósito' }}</td>
                 <td class="text-right"><strong>{{ $producto->stock_actual }}</strong></td>
                 <td class="text-right">{{ $producto->stock_minimo }}</td>
                 <td>{{ $producto->unidad_medida }}</td>

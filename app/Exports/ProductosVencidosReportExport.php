@@ -13,23 +13,43 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class ProductosVencidosReportExport implements FromCollection, WithHeadings, WithStyles, WithColumnWidths, WithTitle
 {
+    protected $sectionId;
+    protected $depositoId;
+
+    public function __construct($sectionId = null, $depositoId = null)
+    {
+        $this->sectionId = $sectionId;
+        $this->depositoId = $depositoId;
+    }
+
     public function collection()
     {
-        return Product::with(['section.stockType'])
+        $query = Product::with(['section.stockType', 'deposito'])
             ->where('tiene_vencimiento', true)
             ->whereNotNull('fecha_vencimiento')
             ->where('fecha_vencimiento', '<', now())
-            ->where('estado', true)
-            ->orderBy('fecha_vencimiento', 'desc')
+            ->where('estado', true);
+
+        // Aplicar filtros
+        if ($this->sectionId) {
+            $query->where('section_id', $this->sectionId);
+        }
+
+        if ($this->depositoId) {
+            $query->where('deposito_id', $this->depositoId);
+        }
+
+        return $query->orderBy('fecha_vencimiento', 'desc')
             ->get()
             ->map(function ($product) {
                 $diasVencidos = now()->diffInDays($product->fecha_vencimiento, false);
-                
+
                 return [
                     $product->codigo,
                     $product->nombre,
                     $product->section->nombre,
                     $product->section->stockType->nombre,
+                    $product->deposito ? $product->deposito->nombre : 'Sin depósito',
                     $product->stock_actual,
                     $product->unidad_medida,
                     $product->fecha_vencimiento->format('d/m/Y'),
@@ -39,7 +59,7 @@ class ProductosVencidosReportExport implements FromCollection, WithHeadings, Wit
                 ];
             });
     }
-    
+
     public function headings(): array
     {
         return [
@@ -47,6 +67,7 @@ class ProductosVencidosReportExport implements FromCollection, WithHeadings, Wit
             'Producto',
             'Sección',
             'Tipo de Stock',
+            'Depósito',
             'Stock Actual',
             'Unidad',
             'Fecha Vencimiento',
@@ -55,7 +76,7 @@ class ProductosVencidosReportExport implements FromCollection, WithHeadings, Wit
             'Acción',
         ];
     }
-    
+
     public function styles(Worksheet $sheet)
     {
         return [
@@ -65,7 +86,7 @@ class ProductosVencidosReportExport implements FromCollection, WithHeadings, Wit
             ],
         ];
     }
-    
+
     public function columnWidths(): array
     {
         return [
@@ -73,15 +94,16 @@ class ProductosVencidosReportExport implements FromCollection, WithHeadings, Wit
             'B' => 40,
             'C' => 25,
             'D' => 25,
-            'E' => 12,
+            'E' => 35,
             'F' => 12,
-            'G' => 18,
-            'H' => 15,
-            'I' => 20,
-            'J' => 15,
+            'G' => 12,
+            'H' => 18,
+            'I' => 15,
+            'J' => 20,
+            'K' => 15,
         ];
     }
-    
+
     public function title(): string
     {
         return 'Productos Vencidos';

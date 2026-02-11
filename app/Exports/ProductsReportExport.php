@@ -16,27 +16,31 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 class ProductsReportExport implements FromCollection, WithHeadings, WithStyles, WithColumnWidths, WithTitle
 {
     protected $filters;
-    
+
     public function __construct($filters = [])
     {
         $this->filters = $filters;
     }
-    
+
     public function collection()
     {
-        $query = Product::with(['section.stockType']);
-        
+        $query = Product::with(['section.stockType', 'deposito']);
+
         // Aplicar filtros
         if (!empty($this->filters['section_id'])) {
             $query->where('section_id', $this->filters['section_id']);
         }
-        
+
         if (!empty($this->filters['stock_type_id'])) {
             $query->whereHas('section', function ($q) {
                 $q->where('stock_type_id', $this->filters['stock_type_id']);
             });
         }
-        
+
+        if (!empty($this->filters['deposito_id'])) {
+            $query->where('deposito_id', $this->filters['deposito_id']);
+        }
+
         if (!empty($this->filters['search'])) {
             $search = $this->filters['search'];
             $query->where(function ($q) use ($search) {
@@ -44,17 +48,18 @@ class ProductsReportExport implements FromCollection, WithHeadings, WithStyles, 
                   ->orWhere('codigo', 'like', "%{$search}%");
             });
         }
-        
+
         if (isset($this->filters['estado'])) {
             $query->where('estado', $this->filters['estado']);
         }
-        
+
         return $query->orderBy('codigo', 'asc')->get()->map(function ($product) {
             return [
                 $product->codigo,
                 $product->nombre,
                 $product->section->nombre,
                 $product->section->stockType->nombre,
+                $product->deposito ? $product->deposito->nombre : 'Sin depósito',
                 $product->stock_actual,
                 $product->stock_minimo,
                 $product->stock_maximo ?? '-',
@@ -65,7 +70,7 @@ class ProductsReportExport implements FromCollection, WithHeadings, WithStyles, 
             ];
         });
     }
-    
+
     public function headings(): array
     {
         return [
@@ -73,6 +78,7 @@ class ProductsReportExport implements FromCollection, WithHeadings, WithStyles, 
             'Nombre del Producto',
             'Sección',
             'Tipo de Stock',
+            'Depósito',
             'Stock Actual',
             'Stock Mínimo',
             'Stock Máximo',
@@ -82,7 +88,7 @@ class ProductsReportExport implements FromCollection, WithHeadings, WithStyles, 
             'Estado',
         ];
     }
-    
+
     public function styles(Worksheet $sheet)
     {
         return [
@@ -93,7 +99,7 @@ class ProductsReportExport implements FromCollection, WithHeadings, WithStyles, 
             ],
         ];
     }
-    
+
     public function columnWidths(): array
     {
         return [
@@ -101,16 +107,17 @@ class ProductsReportExport implements FromCollection, WithHeadings, WithStyles, 
             'B' => 40, // Nombre
             'C' => 25, // Sección
             'D' => 25, // Tipo Stock
-            'E' => 12, // Stock Actual
-            'F' => 12, // Stock Mínimo
-            'G' => 12, // Stock Máximo
-            'H' => 12, // Unidad
-            'I' => 20, // Ubicación
-            'J' => 15, // Estado Stock
-            'K' => 12, // Estado
+            'E' => 35, // Depósito
+            'F' => 12, // Stock Actual
+            'G' => 12, // Stock Mínimo
+            'H' => 12, // Stock Máximo
+            'I' => 12, // Unidad
+            'J' => 20, // Ubicación
+            'K' => 15, // Estado Stock
+            'L' => 12, // Estado
         ];
     }
-    
+
     public function title(): string
     {
         return 'Inventario de Productos';
