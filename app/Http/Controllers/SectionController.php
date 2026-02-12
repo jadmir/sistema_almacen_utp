@@ -49,7 +49,7 @@ class SectionController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'stock_type_id' => 'required|exists:stock_types,id',
-                'codigo' => 'required|string|max:50|unique:sections,codigo',
+                'codigo' => 'required|string|max:50',
                 'nombre' => 'required|string|max:100',
                 'descripcion' => 'nullable|string',
             ]);
@@ -110,7 +110,7 @@ class SectionController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'stock_type_id' => 'sometimes|required|exists:stock_types,id',
-                'codigo' => 'sometimes|required|string|max:50|unique:sections,codigo,' . $id,
+                'codigo' => 'sometimes|required|string|max:50',
                 'nombre' => 'sometimes|required|string|max:100',
                 'descripcion' => 'nullable|string',
                 'estado' => 'sometimes|required|boolean',
