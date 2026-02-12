@@ -101,8 +101,26 @@ class ProductController extends Controller
                 ], 422);
             }
 
-            // Obtener la sección para generar el código
+            // Obtener la sección para validaciones adicionales
             $section = Section::findOrFail($request->section_id);
+
+            // Validar fecha de vencimiento obligatoria para secciones específicas
+            $seccionesConVencimientoObligatorio = ['Consumibles', 'Insumos de limpieza', 'Insumos de botiquin', 'Insumos de botiquín'];
+
+            if (in_array($section->nombre, $seccionesConVencimientoObligatorio)) {
+                if (empty($request->fecha_vencimiento)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'La fecha de vencimiento es obligatoria para productos de la sección: ' . $section->nombre,
+                        'errors' => [
+                            'fecha_vencimiento' => ['La fecha de vencimiento es obligatoria para esta sección']
+                        ]
+                    ], 422);
+                }
+
+                // Forzar tiene_vencimiento a true
+                $request->merge(['tiene_vencimiento' => true]);
+            }
 
             // Buscar el último producto de esta sección para generar el correlativo
             $lastProduct = Product::where('section_id', $request->section_id)
@@ -252,6 +270,7 @@ class ProductController extends Controller
                 'motivo' => 'required|string|max:255',
                 'observaciones' => 'nullable|string',
                 'fecha_movimiento' => 'required|date|before_or_equal:today',
+                'fecha_vencimiento' => 'nullable|date',
             ]);
 
             if ($validator->fails()) {
@@ -262,7 +281,26 @@ class ProductController extends Controller
                 ], 422);
             }
 
-            $producto = Product::findOrFail($id);
+            $producto = Product::with('section')->findOrFail($id);
+
+            // Validar fecha de vencimiento obligatoria para secciones específicas
+            $seccionesConVencimientoObligatorio = ['Consumibles', 'Insumos de limpieza', 'Insumos de botiquin', 'Insumos de botiquín'];
+
+            if (in_array($producto->section->nombre, $seccionesConVencimientoObligatorio)) {
+                if (empty($request->fecha_vencimiento)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'La fecha de vencimiento es obligatoria para productos de la sección: ' . $producto->section->nombre,
+                        'errors' => [
+                            'fecha_vencimiento' => ['La fecha de vencimiento es obligatoria para esta sección']
+                        ]
+                    ], 422);
+                }
+
+                // Actualizar fecha de vencimiento del producto si se proporciona
+                $producto->tiene_vencimiento = true;
+                $producto->fecha_vencimiento = $request->fecha_vencimiento;
+            }
 
             DB::beginTransaction();
 
@@ -605,6 +643,7 @@ class ProductController extends Controller
                 'productos.*.motivo' => 'required|string|max:255',
                 'productos.*.observaciones' => 'nullable|string',
                 'productos.*.fecha_movimiento' => 'required|date|before_or_equal:today',
+                'productos.*.fecha_vencimiento' => 'nullable|date',
             ]);
 
             if ($validator->fails()) {
@@ -620,10 +659,29 @@ class ProductController extends Controller
             $jwtUser = $request->attributes->get('jwt_user');
             $resultados = [];
             $errores = [];
+            $seccionesConVencimientoObligatorio = ['Consumibles', 'Insumos de limpieza', 'Insumos de botiquin', 'Insumos de botiquín'];
 
             foreach ($request->productos as $index => $item) {
                 try {
-                    $producto = Product::findOrFail($item['product_id']);
+                    $producto = Product::with('section')->findOrFail($item['product_id']);
+
+                    // Validar fecha de vencimiento obligatoria para secciones específicas
+                    if (in_array($producto->section->nombre, $seccionesConVencimientoObligatorio)) {
+                        if (empty($item['fecha_vencimiento'])) {
+                            $errores[] = [
+                                'index' => $index,
+                                'product_id' => $item['product_id'],
+                                'codigo' => $producto->codigo,
+                                'nombre' => $producto->nombre,
+                                'error' => 'La fecha de vencimiento es obligatoria para productos de la sección: ' . $producto->section->nombre
+                            ];
+                            continue;
+                        }
+
+                        // Actualizar fecha de vencimiento del producto
+                        $producto->tiene_vencimiento = true;
+                        $producto->fecha_vencimiento = $item['fecha_vencimiento'];
+                    }
 
                     $stockAnterior = $producto->stock_actual;
                     $stockNuevo = $stockAnterior + $item['cantidad'];
