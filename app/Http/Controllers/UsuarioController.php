@@ -3,21 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Mail\UsuarioCreado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class UsuarioController extends Controller
 {
     /**
      * Listar todos los usuarios
      */
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = $request->input('per_page', 15);
         $usuarios = User::with('role')
             ->orderBy('nombre')
-            ->get();
-        
+            ->paginate($perPage);
+
         return response()->json([
+            'status' => 'success',
             'data' => $usuarios
         ]);
     }
@@ -61,11 +65,23 @@ class UsuarioController extends Controller
         $usuario = User::create($validated);
         $usuario->load('role');
 
-        return response()->json([
-            'message' => 'Usuario creado exitosamente',
-            'data' => $usuario,
-            'password_temporal' => $passwordGenerada // Enviar para mostrar al admin
-        ], 201);
+        // Enviar correo con credenciales
+        try {
+            Mail::to($usuario->email)->send(new UsuarioCreado($usuario, $passwordGenerada));
+
+            return response()->json([
+                'message' => 'Usuario creado exitosamente. Se ha enviado un correo con las credenciales de acceso.',
+                'data' => $usuario
+            ], 201);
+        } catch (\Exception $e) {
+            // Si falla el envío del correo, devolver contraseña en respuesta
+            return response()->json([
+                'message' => 'Usuario creado exitosamente, pero no se pudo enviar el correo.',
+                'data' => $usuario,
+                'password_temporal' => $passwordGenerada,
+                'error_correo' => 'Por favor, proporcione las credenciales manualmente al usuario.'
+            ], 201);
+        }
     }
 
     /**
@@ -74,7 +90,7 @@ class UsuarioController extends Controller
     public function show(User $usuario)
     {
         $usuario->load('role');
-        
+
         return response()->json([
             'data' => $usuario
         ]);
@@ -142,7 +158,7 @@ class UsuarioController extends Controller
             ->with('role')
             ->orderBy('nombre')
             ->get();
-        
+
         return response()->json([
             'data' => $usuarios
         ]);
@@ -182,21 +198,21 @@ class UsuarioController extends Controller
     public function assignPermissions(Request $request, $id)
     {
         $usuario = User::findOrFail($id);
-        
+
         // Validar datos de entrada
         $validated = $request->validate([
             'permission_ids' => 'array',
             'revoked_permission_ids' => 'array',
             'remove_all' => 'boolean'
         ]);
-        
+
         // Si viene el flag remove_all, remover todos los permisos y revocaciones
         if ($request->input('remove_all', false)) {
             $usuario->permissions()->sync([]);
             $usuario->revoked_permissions = [];
             $usuario->save();
             $usuario->load(['permissions', 'role.permissions']);
-            
+
             return response()->json([
                 'message' => 'Permisos personalizados y revocaciones removidos exitosamente',
                 'data' => [
@@ -205,20 +221,20 @@ class UsuarioController extends Controller
                 ]
             ]);
         }
-        
+
         // Permisos adicionales (personalizados) - los que marcó ADEMÁS del rol
         $permisosAdicionales = $validated['permission_ids'] ?? [];
-        
+
         // Permisos revocados (del rol que NO queremos para este usuario)
         $permisosRevocados = $validated['revoked_permission_ids'] ?? [];
-        
+
         // Sincronizar permisos adicionales
         $usuario->permissions()->sync($permisosAdicionales);
-        
+
         // Guardar permisos revocados
         $usuario->revoked_permissions = $permisosRevocados;
         $usuario->save();
-        
+
         $usuario->load(['permissions', 'role.permissions']);
 
         return response()->json([
@@ -236,25 +252,25 @@ class UsuarioController extends Controller
     public function getUserPermissions($id)
     {
         $usuario = User::with(['permissions', 'role.permissions'])->findOrFail($id);
-        
+
         // Obtener TODOS los permisos del sistema
         $todosLosPermisos = \App\Models\Permission::orderBy('nombre')->get();
-        
+
         // IDs de permisos individuales del usuario
         $permisosIndividualesIds = $usuario->permissions->pluck('id')->toArray();
-        
+
         // IDs de permisos que vienen del rol
         $permisosDelRolIds = $usuario->role->permissions->pluck('id')->toArray();
-        
+
         // IDs de permisos revocados (del rol que NO quiere este usuario)
         $permisosRevocadosIds = $usuario->revoked_permissions ?? [];
-        
+
         // Mapear todos los permisos con flags
         $permisosConEstado = $todosLosPermisos->map(function($permiso) use ($permisosIndividualesIds, $permisosDelRolIds, $permisosRevocadosIds) {
             $tieneDelRol = in_array($permiso->id, $permisosDelRolIds);
             $estaRevocado = in_array($permiso->id, $permisosRevocadosIds);
             $tieneIndividual = in_array($permiso->id, $permisosIndividualesIds);
-            
+
             return [
                 'id' => $permiso->id,
                 'nombre' => $permiso->nombre,

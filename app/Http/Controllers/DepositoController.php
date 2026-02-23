@@ -21,7 +21,8 @@ class DepositoController extends Controller
                 $query->where('activo', filter_var($request->activo, FILTER_VALIDATE_BOOLEAN));
             }
 
-            $depositos = $query->orderBy('nombre', 'asc')->get();
+            $perPage = $request->input('per_page', 15);
+            $depositos = $query->orderBy('nombre', 'asc')->paginate($perPage);
 
             return response()->json([
                 'status' => 'success',

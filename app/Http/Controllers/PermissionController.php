@@ -11,14 +11,15 @@ class PermissionController extends Controller
     /**
      * Listar todos los permisos
      */
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = $request->input('per_page', 50);
         $permissions = Permission::orderBy('modulo')
             ->orderBy('nombre')
-            ->get()
-            ->groupBy('modulo');
-        
+            ->paginate($perPage);
+
         return response()->json([
+            'status' => 'success',
             'data' => $permissions
         ]);
     }
@@ -63,7 +64,7 @@ class PermissionController extends Controller
     public function show(Permission $permission)
     {
         $permission->load('roles');
-        
+
         return response()->json([
             'data' => $permission
         ]);
@@ -108,7 +109,7 @@ class PermissionController extends Controller
     public function assignToRole(Request $request, $roleId)
     {
         $role = Role::findOrFail($roleId);
-        
+
         $validated = $request->validate([
             'permission_ids' => 'required|array',
             'permission_ids.*' => 'exists:permissions,id',

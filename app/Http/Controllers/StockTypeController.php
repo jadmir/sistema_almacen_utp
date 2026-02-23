@@ -11,12 +11,13 @@ class StockTypeController extends Controller
     /**
      * Listar todos los tipos de stock
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
+            $perPage = $request->input('per_page', 15);
             $stockTypes = StockType::withCount('sections')
                 ->orderBy('nombre', 'asc')
-                ->get();
+                ->paginate($perPage);
 
             return response()->json([
                 'status' => 'success',

@@ -30,7 +30,8 @@ class PlantillaEntregaController extends Controller
                 $query->where('area_id', $request->area_id);
             }
 
-            $plantillas = $query->orderBy('nombre', 'asc')->get();
+            $perPage = $request->input('per_page', 15);
+            $plantillas = $query->orderBy('nombre', 'asc')->paginate($perPage);
 
             return response()->json([
                 'status' => 'success',
@@ -286,7 +287,7 @@ class PlantillaEntregaController extends Controller
 
             foreach ($plantilla->detalles as $detalle) {
                 $producto = Product::findOrFail($detalle->product_id);
-                
+
                 $stockAnterior = $producto->stock_actual;
                 $stockNuevo = $stockAnterior - $detalle->cantidad;
 
@@ -297,7 +298,7 @@ class PlantillaEntregaController extends Controller
                 // Observaciones combinadas
                 $observaciones = $detalle->observaciones;
                 if ($request->observaciones_generales) {
-                    $observaciones = $observaciones 
+                    $observaciones = $observaciones
                         ? $observaciones . ' | ' . $request->observaciones_generales
                         : $request->observaciones_generales;
                 }

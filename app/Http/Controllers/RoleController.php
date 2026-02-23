@@ -10,11 +10,13 @@ class RoleController extends Controller
     /**
      * Listar todos los roles
      */
-    public function index()
+    public function index(Request $request)
     {
-        $roles = Role::orderBy('nombre')->get();
-        
+        $perPage = $request->input('per_page', 15);
+        $roles = Role::orderBy('nombre')->paginate($perPage);
+
         return response()->json([
+            'status' => 'success',
             'data' => $roles
         ]);
     }
@@ -44,7 +46,7 @@ class RoleController extends Controller
     public function show(Role $role)
     {
         $role->load('usuarios');
-        
+
         return response()->json([
             'data' => $role
         ]);

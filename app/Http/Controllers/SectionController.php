@@ -26,7 +26,8 @@ class SectionController extends Controller
                 $query->where('estado', $request->estado);
             }
 
-            $sections = $query->orderBy('codigo', 'asc')->get();
+            $perPage = $request->input('per_page', 15);
+            $sections = $query->orderBy('codigo', 'asc')->paginate($perPage);
 
             return response()->json([
                 'status' => 'success',

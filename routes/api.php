@@ -20,6 +20,8 @@ use App\Http\Controllers\DepositoController;
 // RUTAS PÚBLICAS
 // ========================================
 Route::post('login', [AuthController::class, 'login']);
+Route::post('password/solicitar-recuperacion', [AuthController::class, 'solicitarRecuperacion']);
+Route::post('password/restablecer', [AuthController::class, 'restablecerPassword']);
 
 // ========================================
 // RUTAS PROTEGIDAS CON JWT

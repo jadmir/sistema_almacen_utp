@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Mail\RecuperarPassword;
 use App\Services\JWTService;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Exception;
 
@@ -138,7 +142,7 @@ class AuthController extends Controller
     {
         try {
             $jwtUser = $request->attributes->get('jwt_user');
-            
+
             $user = User::with(['role.permissions', 'permissions'])->find($jwtUser->user_id);
 
             if (!$user || !$user->estado) {
@@ -197,7 +201,7 @@ class AuthController extends Controller
     {
         try {
             $jwtUser = $request->attributes->get('jwt_user');
-            
+
             $user = User::with(['role.permissions', 'permissions'])->find($jwtUser->user_id);
 
             if (!$user) {
@@ -295,6 +299,162 @@ class AuthController extends Controller
                 'status' => 'error',
                 'message' => 'Error al cambiar contraseña',
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Solicitar recuperación de contraseña
+     */
+    public function solicitarRecuperacion(Request $request)
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email'
+            ], [
+                'email.required' => 'El correo electrónico es obligatorio',
+                'email.email' => 'El correo electrónico debe ser válido'
+            ]);
+
+            // Buscar usuario
+            $user = User::where('email', $request->email)->first();
+
+            // Por seguridad, siempre responder lo mismo aunque el email no exista
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Si el correo existe en nuestro sistema, recibirás un enlace de recuperación.'
+                ], 200);
+            }
+
+            // Verificar que el usuario esté activo
+            if (!$user->estado) {
+                return response()->json([
+                    'message' => 'Si el correo existe en nuestro sistema, recibirás un enlace de recuperación.'
+                ], 200);
+            }
+
+            // Generar token único
+            $token = Str::random(64);
+
+            // Eliminar tokens anteriores del mismo usuario
+            DB::table('password_resets')->where('email', $request->email)->delete();
+
+            // Guardar nuevo token
+            DB::table('password_resets')->insert([
+                'email' => $request->email,
+                'token' => Hash::make($token),
+                'created_at' => now()
+            ]);
+
+            // Enviar correo
+            try {
+                Mail::to($user->email)->send(new RecuperarPassword($token, $user->email, $user->nombre));
+
+                return response()->json([
+                    'message' => 'Se ha enviado un enlace de recuperación a tu correo electrónico. Revisa tu bandeja de entrada.'
+                ], 200);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'message' => 'Error al enviar el correo. Por favor, intenta más tarde.',
+                    'error' => config('app.debug') ? $e->getMessage() : null
+                ], 500);
+            }
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Error al procesar la solicitud',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Restablecer contraseña con token
+     */
+    public function restablecerPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'token' => 'required|string',
+                'password' => 'required|string|min:8|max:50|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
+                'password_confirmation' => 'required|same:password'
+            ], [
+                'email.required' => 'El correo electrónico es obligatorio',
+                'email.email' => 'El correo electrónico debe ser válido',
+                'token.required' => 'El token es obligatorio',
+                'password.required' => 'La contraseña es obligatoria',
+                'password.min' => 'La contraseña debe tener al menos 8 caracteres',
+                'password.max' => 'La contraseña no puede exceder 50 caracteres',
+                'password.regex' => 'La contraseña debe contener al menos una mayúscula, una minúscula y un número',
+                'password_confirmation.required' => 'Debes confirmar la contraseña',
+                'password_confirmation.same' => 'Las contraseñas no coinciden'
+            ]);
+
+            // Buscar el token
+            $passwordReset = DB::table('password_resets')
+                ->where('email', $request->email)
+                ->first();
+
+            if (!$passwordReset) {
+                return response()->json([
+                    'message' => 'Token inválido o expirado'
+                ], 400);
+            }
+
+            // Verificar que el token no haya expirado (60 minutos)
+            $createdAt = \Carbon\Carbon::parse($passwordReset->created_at);
+            if ($createdAt->addMinutes(60)->isPast()) {
+                // Eliminar token expirado
+                DB::table('password_resets')->where('email', $request->email)->delete();
+
+                return response()->json([
+                    'message' => 'El token ha expirado. Por favor, solicita uno nuevo.'
+                ], 400);
+            }
+
+            // Verificar que el token coincida
+            if (!Hash::check($request->token, $passwordReset->token)) {
+                return response()->json([
+                    'message' => 'Token inválido'
+                ], 400);
+            }
+
+            // Buscar usuario
+            $user = User::where('email', $request->email)->first();
+
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            // Actualizar contraseña
+            $user->password = Hash::make($request->password);
+            $user->debe_cambiar_password = false; // Ya cambió su contraseña
+            $user->save();
+
+            // Eliminar el token usado
+            DB::table('password_resets')->where('email', $request->email)->delete();
+
+            return response()->json([
+                'message' => 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.'
+            ], 200);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Error al restablecer la contraseña',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
