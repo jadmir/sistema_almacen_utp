@@ -123,22 +123,38 @@ class ProductController extends Controller
             }
 
             // Buscar el último producto de esta sección para generar el correlativo
+            // Usar orderByRaw para ordenamiento numérico correcto
             $lastProduct = Product::where('section_id', $request->section_id)
-                ->where('codigo', 'like', $section->codigo . '-%')
-                ->orderBy('codigo', 'desc')
+                ->orderByRaw('CAST(SUBSTRING_INDEX(codigo, "-", -1) AS UNSIGNED) DESC')
                 ->first();
 
             // Generar el nuevo número correlativo
-            if ($lastProduct) {
-                // Extraer el número del último código (ej: "ASSOF-0089" -> 89)
-                $lastNumber = intval(substr($lastProduct->codigo, strlen($section->codigo) + 1));
-                $newNumber = $lastNumber + 1;
+            if ($lastProduct && $lastProduct->codigo) {
+                // Extraer el número del último código usando explode
+                $codigoParts = explode('-', $lastProduct->codigo);
+                if (count($codigoParts) >= 2) {
+                    $lastNumber = intval(end($codigoParts));
+                    $newNumber = $lastNumber + 1;
+                } else {
+                    // Fallback si el formato no es el esperado
+                    $newNumber = 1;
+                }
             } else {
+                // Primera vez que se crea un producto en esta sección
                 $newNumber = 1;
             }
 
-            // Generar el código completo (ej: "ASSOF-0001")
+            // Generar el código completo (ej: "ASSOF-0001" o "CAJA 01-0001")
             $codigo = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+
+            // Verificar que el código no exista (por seguridad)
+            $maxIntentos = 100;
+            $intento = 0;
+            while (Product::where('codigo', $codigo)->exists() && $intento < $maxIntentos) {
+                $newNumber++;
+                $codigo = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+                $intento++;
+            }
 
             // Crear el producto con el código generado
             $data = $request->all();
@@ -594,22 +610,38 @@ class ProductController extends Controller
         try {
             $section = Section::findOrFail($sectionId);
 
-            // Buscar el último producto de esta sección
+            // Buscar el último producto de esta sección usando ordenamiento numérico
             $lastProduct = Product::where('section_id', $sectionId)
-                ->where('codigo', 'like', $section->codigo . '-%')
-                ->orderBy('codigo', 'desc')
+                ->orderByRaw('CAST(SUBSTRING_INDEX(codigo, "-", -1) AS UNSIGNED) DESC')
                 ->first();
 
             // Generar el nuevo número correlativo
-            if ($lastProduct) {
-                $lastNumber = intval(substr($lastProduct->codigo, strlen($section->codigo) + 1));
-                $newNumber = $lastNumber + 1;
+            if ($lastProduct && $lastProduct->codigo) {
+                // Extraer el número del último código usando explode
+                $codigoParts = explode('-', $lastProduct->codigo);
+                if (count($codigoParts) >= 2) {
+                    $lastNumber = intval(end($codigoParts));
+                    $newNumber = $lastNumber + 1;
+                } else {
+                    // Fallback si el formato no es el esperado
+                    $newNumber = 1;
+                }
             } else {
+                // Primera vez que se crea un producto en esta sección
                 $newNumber = 1;
             }
 
             // Generar el código completo
             $nextCode = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+
+            // Verificar que el código no exista
+            $maxIntentos = 100;
+            $intento = 0;
+            while (Product::where('codigo', $nextCode)->exists() && $intento < $maxIntentos) {
+                $newNumber++;
+                $nextCode = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
+                $intento++;
+            }
 
             return response()->json([
                 'status' => 'success',
