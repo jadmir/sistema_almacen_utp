@@ -123,8 +123,9 @@ class ProductController extends Controller
             }
 
             // Buscar el último producto de esta sección para generar el correlativo
-            // Usar orderByRaw para ordenamiento numérico correcto
-            $lastProduct = Product::where('section_id', $request->section_id)
+            // Incluir productos eliminados (withTrashed) para evitar duplicados
+            $lastProduct = Product::withTrashed()
+                ->where('section_id', $request->section_id)
                 ->orderByRaw('CAST(SUBSTRING_INDEX(codigo, "-", -1) AS UNSIGNED) DESC')
                 ->first();
 
@@ -147,10 +148,10 @@ class ProductController extends Controller
             // Generar el código completo (ej: "ASSOF-0001" o "CAJA 01-0001")
             $codigo = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
 
-            // Verificar que el código no exista (por seguridad)
+            // Verificar que el código no exista (incluyendo eliminados)
             $maxIntentos = 100;
             $intento = 0;
-            while (Product::where('codigo', $codigo)->exists() && $intento < $maxIntentos) {
+            while (Product::withTrashed()->where('codigo', $codigo)->exists() && $intento < $maxIntentos) {
                 $newNumber++;
                 $codigo = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
                 $intento++;
@@ -611,7 +612,9 @@ class ProductController extends Controller
             $section = Section::findOrFail($sectionId);
 
             // Buscar el último producto de esta sección usando ordenamiento numérico
-            $lastProduct = Product::where('section_id', $sectionId)
+            // Incluir productos eliminados (withTrashed) para evitar duplicados
+            $lastProduct = Product::withTrashed()
+                ->where('section_id', $sectionId)
                 ->orderByRaw('CAST(SUBSTRING_INDEX(codigo, "-", -1) AS UNSIGNED) DESC')
                 ->first();
 
@@ -634,10 +637,10 @@ class ProductController extends Controller
             // Generar el código completo
             $nextCode = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
 
-            // Verificar que el código no exista
+            // Verificar que el código no exista (incluyendo eliminados)
             $maxIntentos = 100;
             $intento = 0;
-            while (Product::where('codigo', $nextCode)->exists() && $intento < $maxIntentos) {
+            while (Product::withTrashed()->where('codigo', $nextCode)->exists() && $intento < $maxIntentos) {
                 $newNumber++;
                 $nextCode = $section->codigo . '-' . str_pad($newNumber, 4, '0', STR_PAD_LEFT);
                 $intento++;
