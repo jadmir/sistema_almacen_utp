@@ -23,6 +23,13 @@ return [
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'http://10.243.20.22:5173',
+        'http://localhost',
+        'http://localhost:80',
+        'http://10.243.20.20',
+        'http://www.inventarioutp.com',
+        'http://192.168.1.4',
+        'http://192.168.1.4:80',
+        env('FRONTEND_URL', 'http://localhost:3000'),
     ],
 
     'allowed_origins_patterns' => [],
